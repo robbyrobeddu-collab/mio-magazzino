@@ -17,17 +17,18 @@ sheet = get_sheet()
 
 # --- 2. LETTURA E PULIZIA DATI ---
 try:
-    data = sheet.get_all_records(head=1)
-    if data and isinstance(data, list) and len(data) > 0:
-        df = pd.DataFrame(data)
-        df.columns = [str(c).lower().strip() for c in df.columns]
-        # Pulizia prezzo: converte in numerico per calcoli e visualizzazione
-        df['prezzo'] = pd.to_numeric(df['prezzo'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
+    all_data = sheet.get_all_values()
+    if len(all_data) > 1:
+        headers = [str(c).lower().strip() for c in all_data[0]]
+        df = pd.DataFrame(all_data[1:], columns=headers)
+        
+        # Forza la colonna prezzo a numerico, trattando la virgola come punto
+        df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.')
+        df['prezzo'] = pd.to_numeric(df['prezzo'], errors='coerce').fillna(0.0)
     else:
         df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
 except Exception as e:
-    st.error(f"Errore nella lettura del foglio: {e}")
-    df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
+    st.error(f"Errore lettura: {e}")
 
 # --- 3. FILTRI DI RICERCA ---
 st.subheader("📋 Inventario")
