@@ -60,15 +60,17 @@ if pos_scelta != "Tutte":
     df_display = df_display[df_display['posizione'] == pos_scelta]
 
 # --- 4. VISUALIZZAZIONE ---
+# Usiamo una key dinamica che cambia se il dataframe filtrato cambia
+editor_key = f"editor_{len(df_display)}"
+
 edited_df = st.data_editor(
     df_display,
     use_container_width=True,
     column_config={
         "prezzo": st.column_config.NumberColumn("Prezzo", format="€%.2f"),
     },
-    key="editor"
+    key=editor_key  # <--- Cambia key dinamicamente
 )
-
 # --- 5. SALVATAGGIO MANUALE (Formato Universale) ---
 if not edited_df.astype(str).equals(df_display.astype(str)):
     if st.button("💾 Salva Modifiche"):
