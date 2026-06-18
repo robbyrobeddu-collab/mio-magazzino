@@ -4,6 +4,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import time
 
+# --- 1. CONFIGURAZIONE ---
 def get_sheet():
     scope = ["https://spreadsheets.google.com/feeds", 
              "https://www.googleapis.com/auth/spreadsheets",
@@ -20,8 +21,9 @@ try:
     if data and isinstance(data, list) and len(data) > 0:
         df = pd.DataFrame(data)
         df.columns = [str(c).lower().strip() for c in df.columns]
-        # Pulizia prezzo: converte in stringa, sostituisce virgola, converte in float
-        df['prezzo'] = pd.to_numeric(df['prezzo'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)    else:
+        # Pulizia prezzo: converte in numerico per calcoli e visualizzazione
+        df['prezzo'] = pd.to_numeric(df['prezzo'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)
+    else:
         df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
 except Exception as e:
     st.error(f"Errore nella lettura del foglio: {e}")
@@ -53,25 +55,30 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# --- 5. SALVATAGGIO MANUALE ---
-# Confronto pulito tra le versioni per evitare pulsante sempre visibile
+# --- 5. SALVATAGGIO MANUALE (Versione Corretta) ---
+# Controlla se ci sono modifiche tra la vista attuale e quella editata
 if not edited_df.astype(str).equals(df_display.astype(str)):
     st.warning("⚠️ Hai modifiche in sospeso!")
     if st.button("💾 Salva Modifiche nel Cloud"):
         try:
-            # Ricostruiamo il foglio intero
-            # Nota: sheet.clear() + append_rows è la via più sicura per allineare tutto
+            # 1. Aggiorna il dataframe principale con le modifiche apportate nella vista filtrata
+            df.update(edited_df)
+            
+            # 2. Formatta i prezzi per Google Sheets (virgola come decimale)
+            df_to_save = df.copy()
+            df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{x:.2f}".replace('.', ','))
+            
+            # 3. Riscrittura sicura del foglio
             sheet.clear()
             sheet.append_row(df.columns.tolist())
-            # Convertiamo edited_df in lista per il salvataggio
-            sheet.append_rows(edited_df.values.tolist())
+            sheet.append_rows(df_to_save.values.tolist())
             
             st.success("✅ Salvataggio effettuato!")
             time.sleep(1)
             st.rerun()
         except Exception as e:
             st.error(f"Errore di sincronizzazione: {e}")
-            
+
 # --- 6. AGGIUNGI PRODOTTO ---
 with st.expander("➕ Aggiungi Nuovo Prodotto"):
     with st.form("add_form"):
