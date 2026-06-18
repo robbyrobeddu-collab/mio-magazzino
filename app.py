@@ -65,16 +65,15 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# --- 5. SALVATAGGIO AUTOMATICO (Sostituisci il vecchio blocco 5) ---
-# Confrontiamo il dataframe originale con quello editato
-if not edited_df.equals(df_display):
+# --- 5. SALVATAGGIO MANUALE ---
+# Invece di salvare ad ogni click, salviamo solo quando l'utente preme un pulsante
+if st.button("💾 Salva Modifiche nel Cloud"):
     try:
-        # Sincronizzazione semplificata
-        sheet.clear() # Pulisce tutto
-        sheet.append_row(df.columns.tolist()) # Rimette le intestazioni
-        sheet.append_rows(edited_df.values.tolist()) # Scrive i nuovi dati
-        
-        st.toast("✅ Dati aggiornati!")
+        # Pulisce e riscrive solo quando necessario
+        sheet.clear()
+        sheet.append_row(df.columns.tolist())
+        sheet.append_rows(edited_df.values.tolist())
+        st.success("✅ Salvataggio completato!")
         st.rerun()
     except Exception as e:
         st.error(f"Errore: {e}")
