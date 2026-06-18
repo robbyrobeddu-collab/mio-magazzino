@@ -23,6 +23,14 @@ try:
     data = sheet.get_all_records(head=1)
     if data and isinstance(data, list) and len(data) > 0:
         df = pd.DataFrame(data)
+        # --- 2. PULIZIA DATI (da inserire qui) ---
+if data and isinstance(data, list) and len(data) > 0:
+    df = pd.DataFrame(data)
+    df.columns = [str(c).lower().strip() for c in df.columns]
+    
+    # FORZA IL PREZZO A NUMERO
+    # Se il prezzo ha una virgola, la trasforma in punto e lo converte in numero
+    df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.').astype(float)
         # Normalizzazione nomi colonne
         df.columns = [str(c).lower().strip() for c in df.columns]
     else:
@@ -48,26 +56,27 @@ if cat_scelta != "Tutte":
 if pos_scelta != "Tutte":
     df_display = df_display[df_display['posizione'] == pos_scelta]
 
-# --- 4. VISUALIZZAZIONE STABILE (Sostituisci il vecchio blocco 4) ---
-# Usiamo st.data_editor di Streamlit nativo, è molto più stabile di AgGrid
-# e gestisce meglio il layout mobile.
+# --- 4. VISUALIZZAZIONE ---
 edited_df = st.data_editor(
     df_display,
     use_container_width=True,
-    hide_index=True,
     column_config={
-        "codice": st.column_config.TextColumn("Codice", disabled=True), # Bloccato
-        "categoria": st.column_config.TextColumn("Categoria"),
-        "descrizione": st.column_config.TextColumn("Descrizione"),
-        "quantita": st.column_config.NumberColumn("Quantità"),
         "prezzo": st.column_config.NumberColumn("Prezzo", format="€%.2f"),
     },
     key="editor"
 )
 
-# --- 5. SALVATAGGIO MANUALE ---
-# Invece di salvare ad ogni minima modifica, mostriamo il pulsante 
-# solo se ci sono cambiamenti rilevati rispetto al dato iniziale.
+# --- 5. SALVATAGGIO MANUALE (Mettilo qui sotto) ---
+# Usiamo astype(str) per evitare che il pulsante appaia sempre
+if not edited_df.astype(str).equals(df_display.astype(str)):
+    st.warning("⚠️ Hai modifiche in sospeso!")
+    if st.button("💾 Salva Modifiche nel Cloud"):
+        # Qui il tuo codice che scrive su Google Sheets
+        sheet.clear()
+        sheet.append_row(df.columns.tolist())
+        sheet.append_rows(edited_df.values.tolist())
+        st.success("✅ Salvataggio completato!")
+        st.rerun()
 
 if not edited_df.astype(str).equals(df_display.astype(str)):
     st.warning("⚠️ Hai modifiche in sospeso!")
