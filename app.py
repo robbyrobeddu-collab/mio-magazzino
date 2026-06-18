@@ -21,8 +21,7 @@ try:
         df = pd.DataFrame(data)
         df.columns = [str(c).lower().strip() for c in df.columns]
         # Pulizia prezzo: converte in stringa, sostituisce virgola, converte in float
-        df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.').replace('', '0').astype(float)
-    else:
+        df['prezzo'] = pd.to_numeric(df['prezzo'].astype(str).str.replace(',', '.'), errors='coerce').fillna(0.0)    else:
         df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
 except Exception as e:
     st.error(f"Errore nella lettura del foglio: {e}")
