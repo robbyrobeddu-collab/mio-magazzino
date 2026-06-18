@@ -17,11 +17,17 @@ def get_sheet():
 sheet = get_sheet()
 
 # --- 2. LETTURA DATI ---
-data = sheet.get_all_records(head=1)
-if data:
-    df = pd.DataFrame(data)
-    df.columns = [str(c).lower().strip() for c in df.columns]
-else:
+try:
+    data = sheet.get_all_records(head=1)
+    if data and isinstance(data, list) and len(data) > 0:
+        df = pd.DataFrame(data)
+        # Normalizzazione nomi colonne
+        df.columns = [str(c).lower().strip() for c in df.columns]
+    else:
+        # Crea un DataFrame vuoto con le colonne previste se il foglio è vuoto
+        df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
+except Exception as e:
+    st.error(f"Errore nella lettura del foglio: {e}")
     df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
 
 # --- 3. FILTRI DI RICERCA ---
