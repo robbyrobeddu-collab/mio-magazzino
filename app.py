@@ -1,22 +1,17 @@
 import streamlit as st
-import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
-st.set_page_config(page_title="Magazzino Online", layout="centered")
-st.title("🛠 Magazzino Online")
-
-# --- 1. CONNESSIONE GOOGLE SHEETS ---
 def get_sheet():
     scope = ["https://spreadsheets.google.com/feeds", 
              "https://www.googleapis.com/auth/spreadsheets",
              "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    
+    # NON usare più from_json_keyfile_name
+    # Usa from_json_keyfile_dict puntando a st.secrets
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets, scope)
     client = gspread.authorize(creds)
     return client.open("Magazzino").sheet1
-
-sheet = get_sheet()
 
 # --- 2. LETTURA DATI ---
 data = sheet.get_all_records(head=1)
