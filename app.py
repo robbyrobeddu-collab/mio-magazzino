@@ -48,38 +48,36 @@ if cat_scelta != "Tutte":
 if pos_scelta != "Tutte":
     df_display = df_display[df_display['posizione'] == pos_scelta]
 
-# --- 4. CONFIGURAZIONE GRIGLIA ---
-gb = GridOptionsBuilder.from_dataframe(df_display)
-gb.configure_default_column(editable=True)
-gb.configure_column("codice", editable=False)
-grid_options = gb.build()
+# --- 4. VISUALIZZAZIONE STABILE (Sostituisci il vecchio blocco 4) ---
+# Usiamo st.data_editor di Streamlit nativo, è molto più stabile di AgGrid
+# e gestisce meglio il layout mobile.
+edited_df = st.data_editor(
+    df_display,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "codice": st.column_config.TextColumn("Codice", disabled=True), # Bloccato
+        "categoria": st.column_config.TextColumn("Categoria"),
+        "descrizione": st.column_config.TextColumn("Descrizione"),
+        "quantita": st.column_config.NumberColumn("Quantità"),
+        "prezzo": st.column_config.NumberColumn("Prezzo", format="€%.2f"),
+    },
+    key="editor"
+)
 
-response = AgGrid(df_display, gridOptions=grid_options, update_mode=GridUpdateMode.GRID_CHANGED, key="aggrid")
-
-# --- 5. SALVATAGGIO AUTOMATICO ---
-# Controlliamo se 'data' esiste nella risposta
-if 'data' in response and response['data'] is not None:
-    nuovo_df = pd.DataFrame(response['data'])
-
-    # Pulizia colonne
-    nuovo_df.columns = [str(c).lower().strip() for c in nuovo_df.columns]
-
-    # Confronto tra DataFrame per verificare se c'è stato un cambiamento reale
-    # Usiamo .astype(str) per evitare errori di tipo
-    if not nuovo_df.astype(str).equals(df.astype(str)):
-        try:
-            # Pulisce solo i dati, mantiene l'header (Riga 1)
-            if sheet.row_count > 1:
-                sheet.delete_rows(2, sheet.row_count)
-
-            # Scrive i nuovi dati
-            if not nuovo_df.empty:
-                sheet.append_rows(nuovo_df.values.tolist())
-
-            st.toast("✅ Dati sincronizzati con il Cloud!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Errore di sincronizzazione: {e}")
+# --- 5. SALVATAGGIO AUTOMATICO (Sostituisci il vecchio blocco 5) ---
+# Confrontiamo il dataframe originale con quello editato
+if not edited_df.equals(df_display):
+    try:
+        # Sincronizzazione semplificata
+        sheet.clear() # Pulisce tutto
+        sheet.append_row(df.columns.tolist()) # Rimette le intestazioni
+        sheet.append_rows(edited_df.values.tolist()) # Scrive i nuovi dati
+        
+        st.toast("✅ Dati aggiornati!")
+        st.rerun()
+    except Exception as e:
+        st.error(f"Errore: {e}")
 
 # --- 6. AGGIUNGI PRODOTTO ---
 with st.expander("➕ Aggiungi Nuovo Prodotto"):
