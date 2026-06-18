@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+
 
 def get_sheet():
     scope = ["https://spreadsheets.google.com/feeds", 
