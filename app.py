@@ -63,6 +63,9 @@ if pos_scelta != "Tutte":
 # Usiamo una key dinamica che cambia se il dataframe filtrato cambia
 editor_key = f"editor_{len(df_display)}"
 
+
+df_display['quantita'] = pd.to_numeric(df_display['quantita'], errors='coerce').fillna(0).astype(int)
+df_display['prezzo'] = pd.to_numeric(df_display['prezzo'], errors='coerce').fillna(0.0)
 edited_df = st.data_editor(
     df_display,
     use_container_width=True,
