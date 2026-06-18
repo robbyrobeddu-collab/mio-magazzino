@@ -56,29 +56,24 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# --- 5. SALVATAGGIO MANUALE (Versione Blindata) ---
+# --- 5. SALVATAGGIO MANUALE (Formato Universale) ---
 if not edited_df.astype(str).equals(df_display.astype(str)):
-    st.warning("⚠️ Hai modifiche in sospeso!")
-    if st.button("💾 Salva Modifiche nel Cloud"):
+    if st.button("💾 Salva Modifiche"):
         try:
-            # 1. Aggiorna il dataframe principale
             df.update(edited_df)
-            
-            # 2. Convertiamo i prezzi in stringhe con il punto (formato internazionale standard)
-            # Questo assicura che il dato salvato sia fisso e non venga reinterpretato
             df_to_save = df.copy()
-            df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{float(x):.2f}")
             
-            # 3. Riscrittura sicura
+            # Formattazione per Google Sheets Italia (usa la virgola)
+            df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{float(x):.2f}".replace('.', ','))
+            
             sheet.clear()
             sheet.append_row(df.columns.tolist())
             sheet.append_rows(df_to_save.values.tolist())
             
-            st.success("✅ Salvataggio effettuato!")
-            time.sleep(1)
+            st.success("✅ Salvataggio riuscito!")
             st.rerun()
         except Exception as e:
-            st.error(f"Errore: {e}")
+            st.error(f"Errore durante il salvataggio: {e}")
 
 # --- 6. AGGIUNGI PRODOTTO ---
 with st.expander("➕ Aggiungi Nuovo Prodotto"):
