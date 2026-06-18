@@ -69,7 +69,7 @@ edited_df = st.data_editor(
 # Invece di salvare ad ogni minima modifica, mostriamo il pulsante 
 # solo se ci sono cambiamenti rilevati rispetto al dato iniziale.
 
-if not edited_df.equals(df_display):
+if not edited_df.astype(str).equals(df_display.astype(str)):
     st.warning("⚠️ Hai modifiche in sospeso!")
     if st.button("💾 Salva Modifiche nel Cloud"):
         try:
