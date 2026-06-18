@@ -2,39 +2,27 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-
+import time
 
 def get_sheet():
     scope = ["https://spreadsheets.google.com/feeds", 
              "https://www.googleapis.com/auth/spreadsheets",
              "https://www.googleapis.com/auth/drive"]
-    
-    # st.secrets carica automaticamente il file TOML che hai salvato in Settings
-    # Assicurati di non passare il nome di un file qui!
     creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets, scope)
     client = gspread.authorize(creds)
     return client.open("Magazzino").sheet1
 
-# Chiama la funzione
 sheet = get_sheet()
 
-# --- 2. LETTURA DATI ---
+# --- 2. LETTURA E PULIZIA DATI ---
 try:
     data = sheet.get_all_records(head=1)
     if data and isinstance(data, list) and len(data) > 0:
         df = pd.DataFrame(data)
-        # --- 2. PULIZIA DATI (da inserire qui) ---
-if data and isinstance(data, list) and len(data) > 0:
-    df = pd.DataFrame(data)
-    df.columns = [str(c).lower().strip() for c in df.columns]
-    
-    # FORZA IL PREZZO A NUMERO
-    # Se il prezzo ha una virgola, la trasforma in punto e lo converte in numero
-    df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.').astype(float)
-        # Normalizzazione nomi colonne
         df.columns = [str(c).lower().strip() for c in df.columns]
+        # Pulizia prezzo: converte in stringa, sostituisce virgola, converte in float
+        df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.').replace('', '0').astype(float)
     else:
-        # Crea un DataFrame vuoto con le colonne previste se il foglio è vuoto
         df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
 except Exception as e:
     st.error(f"Errore nella lettura del foglio: {e}")
@@ -66,30 +54,20 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# --- 5. SALVATAGGIO MANUALE (Mettilo qui sotto) ---
-# Usiamo astype(str) per evitare che il pulsante appaia sempre
-if not edited_df.astype(str).equals(df_display.astype(str)):
-    st.warning("⚠️ Hai modifiche in sospeso!")
-    if st.button("💾 Salva Modifiche nel Cloud"):
-        # Qui il tuo codice che scrive su Google Sheets
-        sheet.clear()
-        sheet.append_row(df.columns.tolist())
-        sheet.append_rows(edited_df.values.tolist())
-        st.success("✅ Salvataggio completato!")
-        st.rerun()
-
+# --- 5. SALVATAGGIO MANUALE ---
+# Confronto pulito tra le versioni per evitare pulsante sempre visibile
 if not edited_df.astype(str).equals(df_display.astype(str)):
     st.warning("⚠️ Hai modifiche in sospeso!")
     if st.button("💾 Salva Modifiche nel Cloud"):
         try:
-            # Pulisce e riscrive il foglio
+            # Ricostruiamo il foglio intero
+            # Nota: sheet.clear() + append_rows è la via più sicura per allineare tutto
             sheet.clear()
             sheet.append_row(df.columns.tolist())
+            # Convertiamo edited_df in lista per il salvataggio
             sheet.append_rows(edited_df.values.tolist())
             
-            st.success("✅ Salvataggio effettuato con successo!")
-            # Un piccolo ritardo per far vedere il messaggio, poi ricarica
-            import time
+            st.success("✅ Salvataggio effettuato!")
             time.sleep(1)
             st.rerun()
         except Exception as e:
