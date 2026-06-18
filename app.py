@@ -66,18 +66,26 @@ edited_df = st.data_editor(
 )
 
 # --- 5. SALVATAGGIO MANUALE ---
-# Invece di salvare ad ogni click, salviamo solo quando l'utente preme un pulsante
-if st.button("💾 Salva Modifiche nel Cloud"):
-    try:
-        # Pulisce e riscrive solo quando necessario
-        sheet.clear()
-        sheet.append_row(df.columns.tolist())
-        sheet.append_rows(edited_df.values.tolist())
-        st.success("✅ Salvataggio completato!")
-        st.rerun()
-    except Exception as e:
-        st.error(f"Errore: {e}")
+# Invece di salvare ad ogni minima modifica, mostriamo il pulsante 
+# solo se ci sono cambiamenti rilevati rispetto al dato iniziale.
 
+if not edited_df.equals(df_display):
+    st.warning("⚠️ Hai modifiche in sospeso!")
+    if st.button("💾 Salva Modifiche nel Cloud"):
+        try:
+            # Pulisce e riscrive il foglio
+            sheet.clear()
+            sheet.append_row(df.columns.tolist())
+            sheet.append_rows(edited_df.values.tolist())
+            
+            st.success("✅ Salvataggio effettuato con successo!")
+            # Un piccolo ritardo per far vedere il messaggio, poi ricarica
+            import time
+            time.sleep(1)
+            st.rerun()
+        except Exception as e:
+            st.error(f"Errore di sincronizzazione: {e}")
+            
 # --- 6. AGGIUNGI PRODOTTO ---
 with st.expander("➕ Aggiungi Nuovo Prodotto"):
     with st.form("add_form"):
