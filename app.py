@@ -55,20 +55,20 @@ edited_df = st.data_editor(
     key="editor"
 )
 
-# --- 5. SALVATAGGIO MANUALE (Versione Corretta) ---
-# Controlla se ci sono modifiche tra la vista attuale e quella editata
+# --- 5. SALVATAGGIO MANUALE (Versione Blindata) ---
 if not edited_df.astype(str).equals(df_display.astype(str)):
     st.warning("⚠️ Hai modifiche in sospeso!")
     if st.button("💾 Salva Modifiche nel Cloud"):
         try:
-            # 1. Aggiorna il dataframe principale con le modifiche apportate nella vista filtrata
+            # 1. Aggiorna il dataframe principale
             df.update(edited_df)
             
-            # 2. Formatta i prezzi per Google Sheets (virgola come decimale)
+            # 2. Convertiamo i prezzi in stringhe con il punto (formato internazionale standard)
+            # Questo assicura che il dato salvato sia fisso e non venga reinterpretato
             df_to_save = df.copy()
-            df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{x:.2f}".replace('.', ','))
+            df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{float(x):.2f}")
             
-            # 3. Riscrittura sicura del foglio
+            # 3. Riscrittura sicura
             sheet.clear()
             sheet.append_row(df.columns.tolist())
             sheet.append_rows(df_to_save.values.tolist())
@@ -77,7 +77,7 @@ if not edited_df.astype(str).equals(df_display.astype(str)):
             time.sleep(1)
             st.rerun()
         except Exception as e:
-            st.error(f"Errore di sincronizzazione: {e}")
+            st.error(f"Errore: {e}")
 
 # --- 6. AGGIUNGI PRODOTTO ---
 with st.expander("➕ Aggiungi Nuovo Prodotto"):
