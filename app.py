@@ -52,9 +52,10 @@ df_display = df.copy()
 
 # Logica di filtraggio combinata con gestione sicura dei tipi
 if ricerca:
+    # Cambiato na='' in na=False per rispettare la nuova sintassi di Pandas
     df_display = df_display[
-        df_display['descrizione'].str.contains(ricerca, case=False, na='') | 
-        df_display['codice'].str.contains(ricerca, case=False, na='')
+        df_display['descrizione'].str.contains(ricerca, case=False, na=False) | 
+        df_display['codice'].str.contains(ricerca, case=False, na=False)
     ]
 
 if cat_scelta != "Tutte":
