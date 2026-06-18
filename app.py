@@ -33,10 +33,14 @@ except Exception as e:
 # --- 3. FILTRI DI RICERCA ---
 st.subheader("📋 Inventario")
 
-# Aggiungiamo la barra di ricerca in una colonna dedicata
+# Aggiungiamo la barra di ricerca
 ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="Scrivi qui per filtrare...")
 
 col1, col2 = st.columns(2)
+
+# Forza la conversione delle colonne in stringa per evitare errori di tipo
+df['descrizione'] = df['descrizione'].astype(str)
+df['codice'] = df['codice'].astype(str)
 
 categorie = ["Tutte"] + sorted(df['categoria'].unique().tolist())
 cat_scelta = col1.selectbox("Filtra per Categoria:", categorie)
@@ -46,9 +50,8 @@ pos_scelta = col2.selectbox("Filtra per Posizione:", posizioni)
 
 df_display = df.copy()
 
-# Logica di filtraggio combinata
+# Logica di filtraggio combinata con gestione sicura dei tipi
 if ricerca:
-    # Filtra se il testo è contenuto nel codice o nella descrizione
     df_display = df_display[
         df_display['descrizione'].str.contains(ricerca, case=False, na='') | 
         df_display['codice'].str.contains(ricerca, case=False, na='')
@@ -58,7 +61,6 @@ if cat_scelta != "Tutte":
     df_display = df_display[df_display['categoria'] == cat_scelta]
 if pos_scelta != "Tutte":
     df_display = df_display[df_display['posizione'] == pos_scelta]
-
 # --- 4. VISUALIZZAZIONE ---
 # Usiamo una key dinamica che cambia se il dataframe filtrato cambia
 editor_key = f"editor_{len(df_display)}"
