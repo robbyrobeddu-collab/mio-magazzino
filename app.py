@@ -32,15 +32,28 @@ except Exception as e:
 
 # --- 3. FILTRI DI RICERCA ---
 st.subheader("📋 Inventario")
+
+# Aggiungiamo la barra di ricerca in una colonna dedicata
+ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="Scrivi qui per filtrare...")
+
 col1, col2 = st.columns(2)
 
 categorie = ["Tutte"] + sorted(df['categoria'].unique().tolist())
-cat_scelta = col1.selectbox("Categoria:", categorie)
+cat_scelta = col1.selectbox("Filtra per Categoria:", categorie)
 
 posizioni = ["Tutte"] + sorted(df['posizione'].unique().tolist())
-pos_scelta = col2.selectbox("Posizione:", posizioni)
+pos_scelta = col2.selectbox("Filtra per Posizione:", posizioni)
 
 df_display = df.copy()
+
+# Logica di filtraggio combinata
+if ricerca:
+    # Filtra se il testo è contenuto nel codice o nella descrizione
+    df_display = df_display[
+        df_display['descrizione'].str.contains(ricerca, case=False, na='') | 
+        df_display['codice'].str.contains(ricerca, case=False, na='')
+    ]
+
 if cat_scelta != "Tutte":
     df_display = df_display[df_display['categoria'] == cat_scelta]
 if pos_scelta != "Tutte":
