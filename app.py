@@ -7,11 +7,14 @@ def get_sheet():
              "https://www.googleapis.com/auth/spreadsheets",
              "https://www.googleapis.com/auth/drive"]
     
-    # NON usare più from_json_keyfile_name
-    # Usa from_json_keyfile_dict puntando a st.secrets
+    # st.secrets carica automaticamente il file TOML che hai salvato in Settings
+    # Assicurati di non passare il nome di un file qui!
     creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets, scope)
     client = gspread.authorize(creds)
     return client.open("Magazzino").sheet1
+
+# Chiama la funzione
+sheet = get_sheet()
 
 # --- 2. LETTURA DATI ---
 data = sheet.get_all_records(head=1)
