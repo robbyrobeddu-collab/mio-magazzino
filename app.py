@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import time
 
 # --- 1. CONFIGURAZIONE ---
 def get_sheet():
@@ -15,10 +14,6 @@ def get_sheet():
 
 sheet = get_sheet()
 
-# Funzione di supporto per convertire in sicurezza qualsiasi colonna in stringa standard (evita errori PyArrow/Pandas)
-def to_str_safe(series):
-    return series.astype(object).fillna("").apply(lambda x: "" if str(x).lower() in ["nan", "none", "<na>"] else str(x))
-
 text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
 
 # --- 2. LETTURA E PULIZIA DATI ---
@@ -26,20 +21,23 @@ try:
     all_data = sheet.get_all_values()
     if len(all_data) > 1:
         headers = [str(c).lower().strip() for c in all_data[0]]
-        df = pd.DataFrame(all_data[1:], columns=headers)
+        # Forza tutto a object per evitare blocchi di tipo in Pandas
+        df = pd.DataFrame(all_data[1:], columns=headers, dtype=object)
         
-        # Pulizia preventiva delle colonne testuali
-        for col in text_cols:
-            if col in df.columns:
-                df[col] = to_str_safe(df[col])
-        
-        # Forza la colonna prezzo a numerico, trattando la virgola come punto
-        df['prezzo'] = to_str_safe(df['prezzo']).str.replace(',', '.')
-        df['prezzo'] = pd.to_numeric(df['prezzo'], errors='coerce').fillna(0.0)
+        for col in df.columns:
+            df[col] = df[col].fillna("").astype(object)
+            
+        if 'prezzo' in df.columns:
+            df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.')
+            df['prezzo'] = pd.to_numeric(df['prezzo'], errors='coerce').fillna(0.0)
+            
+        if 'quantita' in df.columns:
+            df['quantita'] = pd.to_numeric(df['quantita'], errors='coerce').fillna(0).astype(int)
     else:
-        df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
+        df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'], dtype=object)
 except Exception as e:
     st.error(f"Errore lettura: {e}")
+    df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'], dtype=object)
 
 # --- 3. FILTRI DI RICERCA ---
 st.subheader("📋 Inventario")
@@ -48,30 +46,33 @@ ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="S
 
 col1, col2 = st.columns(2)
 
-# Assicuriamoci che le colonne di testo siano sicure
 for col in text_cols:
     if col in df.columns:
-        df[col] = to_str_safe(df[col])
+        df[col] = df[col].astype(object).fillna("")
 
-categorie = ["Tutte"] + sorted(df['categoria'].unique().tolist())
+cat_list = sorted(df['categoria'].astype(str).unique().tolist()) if 'categoria' in df.columns else []
+categorie = ["Tutte"] + [c for c in cat_list if c != ""]
+
+pos_list = sorted(df['posizione'].astype(str).unique().tolist()) if 'posizione' in df.columns else []
+posizioni = ["Tutte"] + [p for p in pos_list if p != ""]
+
 cat_scelta = col1.selectbox("Filtra per Categoria:", categorie)
-
-posizioni = ["Tutte"] + sorted(df['posizione'].unique().tolist())
 pos_scelta = col2.selectbox("Filtra per Posizione:", posizioni)
 
 df_display = df.copy()
 
 # Logica di filtraggio
 if ricerca:
-    df_display = df_display[
-        df_display['descrizione'].str.contains(ricerca, case=False, na=False) | 
-        df_display['codice'].str.contains(ricerca, case=False, na=False)
-    ]
+    mask = (
+        df_display['descrizione'].astype(str).str.contains(ricerca, case=False, na=False) | 
+        df_display['codice'].astype(str).str.contains(ricerca, case=False, na=False)
+    )
+    df_display = df_display[mask]
 
 if cat_scelta != "Tutte":
-    df_display = df_display[df_display['categoria'] == cat_scelta]
+    df_display = df_display[df_display['categoria'].astype(str) == cat_scelta]
 if pos_scelta != "Tutte":
-    df_display = df_display[df_display['posizione'] == pos_scelta]
+    df_display = df_display[df_display['posizione'].astype(str) == pos_scelta]
 
 # --- 4. VISUALIZZAZIONE ---
 editor_key = f"editor_{len(df_display)}"
@@ -91,19 +92,17 @@ edited_df = st.data_editor(
 # --- 5. SALVATAGGIO MANUALE ---
 if st.button("💾 Salva Modifiche"):
     try:
-        # Mettiamo in sicurezza tutte le colonne testuali ricevute dall'editor
-        for col in text_cols:
-            if col in edited_df.columns:
-                edited_df[col] = to_str_safe(edited_df[col])
-
-        # Aggiorniamo il DataFrame principale
-        df.update(edited_df)
+        # Aggiornamento sicuro cella per cella (evita i controlli di dtype di df.update)
+        for idx in edited_df.index:
+            for col in edited_df.columns:
+                df.loc[idx, col] = edited_df.loc[idx, col]
+        
         df_to_save = df.copy()
         
         # Pulizia finale prima della scrittura su Google Sheets
         for col in text_cols:
             if col in df_to_save.columns:
-                df_to_save[col] = to_str_safe(df_to_save[col])
+                df_to_save[col] = df_to_save[col].astype(object).fillna("").apply(lambda x: "" if str(x).lower() in ["nan", "none", "<na>"] else str(x))
                 
         df_to_save['quantita'] = pd.to_numeric(df_to_save['quantita'], errors='coerce').fillna(0).astype(int)
         
