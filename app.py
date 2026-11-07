@@ -15,6 +15,12 @@ def get_sheet():
 
 sheet = get_sheet()
 
+# Funzione di supporto per convertire in sicurezza qualsiasi colonna in stringa standard (evita errori PyArrow/Pandas)
+def to_str_safe(series):
+    return series.astype(object).fillna("").apply(lambda x: "" if str(x).lower() in ["nan", "none", "<na>"] else str(x))
+
+text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
+
 # --- 2. LETTURA E PULIZIA DATI ---
 try:
     all_data = sheet.get_all_values()
@@ -23,13 +29,12 @@ try:
         df = pd.DataFrame(all_data[1:], columns=headers)
         
         # Pulizia preventiva delle colonne testuali
-        text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
         for col in text_cols:
             if col in df.columns:
-                df[col] = df[col].astype(str).replace(['nan', 'None', '<NA>'], '')
+                df[col] = to_str_safe(df[col])
         
         # Forza la colonna prezzo a numerico, trattando la virgola come punto
-        df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.')
+        df['prezzo'] = to_str_safe(df['prezzo']).str.replace(',', '.')
         df['prezzo'] = pd.to_numeric(df['prezzo'], errors='coerce').fillna(0.0)
     else:
         df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
@@ -43,11 +48,10 @@ ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="S
 
 col1, col2 = st.columns(2)
 
-# Assicuriamoci che le colonne di testo siano stringhe standard
-text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
+# Assicuriamoci che le colonne di testo siano sicure
 for col in text_cols:
     if col in df.columns:
-        df[col] = df[col].astype(str).replace(['nan', 'None', '<NA>'], '')
+        df[col] = to_str_safe(df[col])
 
 categorie = ["Tutte"] + sorted(df['categoria'].unique().tolist())
 cat_scelta = col1.selectbox("Filtra per Categoria:", categorie)
@@ -87,19 +91,19 @@ edited_df = st.data_editor(
 # --- 5. SALVATAGGIO MANUALE ---
 if st.button("💾 Salva Modifiche"):
     try:
-        # Convertiamo subito in stringa ogni colonna di testo in edited_df
+        # Mettiamo in sicurezza tutte le colonne testuali ricevute dall'editor
         for col in text_cols:
             if col in edited_df.columns:
-                edited_df[col] = edited_df[col].fillna("").astype(str).replace(['nan', 'None', '<NA>'], '')
+                edited_df[col] = to_str_safe(edited_df[col])
 
         # Aggiorniamo il DataFrame principale
         df.update(edited_df)
         df_to_save = df.copy()
         
-        # Pulizia finale prima della scrittura
+        # Pulizia finale prima della scrittura su Google Sheets
         for col in text_cols:
             if col in df_to_save.columns:
-                df_to_save[col] = df_to_save[col].astype(str).replace(['nan', 'None', '<NA>'], '')
+                df_to_save[col] = to_str_safe(df_to_save[col])
                 
         df_to_save['quantita'] = pd.to_numeric(df_to_save['quantita'], errors='coerce').fillna(0).astype(int)
         
@@ -123,8 +127,4 @@ with st.expander("➕ Aggiungi Nuovo Prodotto"):
         new_cat = st.text_input("Categoria")
         new_desc = st.text_input("Descrizione")
         new_qta = st.number_input("Quantità", value=0)
-        new_prz = st.number_input("Prezzo", value=0.0)
-        new_pos = st.text_input("Posizione")
-        if st.form_submit_button("Salva"):
-            sheet.append_row([str(new_cod), str(new_cat), str(new_desc), int(new_qta), float(new_prz), str(new_pos)])
-            st.rerun()
+        new_prz = st.number_input("Prezzo", value=
