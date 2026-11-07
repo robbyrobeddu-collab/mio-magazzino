@@ -3,7 +3,13 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- 1. CONFIGURAZIONE ---
+# --- 1. CONFIGURAZIONE PAGINA (LAYOUT LARGO) ---
+st.set_page_config(
+    page_title="Gestione Magazzino",
+    page_icon="📦",
+    layout="wide"  # <--- Questo espande l'app a tutto schermo
+)
+
 def get_sheet():
     scope = ["https://spreadsheets.google.com/feeds", 
              "https://www.googleapis.com/auth/spreadsheets",
@@ -21,7 +27,6 @@ try:
     all_data = sheet.get_all_values()
     if len(all_data) > 1:
         headers = [str(c).lower().strip() for c in all_data[0]]
-        # Forza tutto a object per evitare blocchi di tipo in Pandas
         df = pd.DataFrame(all_data[1:], columns=headers, dtype=object)
         
         for col in df.columns:
@@ -85,6 +90,7 @@ edited_df = st.data_editor(
     use_container_width=True,
     column_config={
         "prezzo": st.column_config.NumberColumn("Prezzo", format="€%.2f"),
+        "descrizione": st.column_config.TextColumn("Descrizione", width="large"), # Dà più spazio alla descrizione
     },
     key=editor_key
 )
@@ -92,42 +98,20 @@ edited_df = st.data_editor(
 # --- 5. SALVATAGGIO MANUALE ---
 if st.button("💾 Salva Modifiche"):
     try:
-        # Aggiornamento sicuro cella per cella (evita i controlli di dtype di df.update)
         for idx in edited_df.index:
             for col in edited_df.columns:
                 df.loc[idx, col] = edited_df.loc[idx, col]
         
         df_to_save = df.copy()
         
-        # Pulizia finale prima della scrittura su Google Sheets
         for col in text_cols:
             if col in df_to_save.columns:
                 df_to_save[col] = df_to_save[col].astype(object).fillna("").apply(lambda x: "" if str(x).lower() in ["nan", "none", "<na>"] else str(x))
                 
         df_to_save['quantita'] = pd.to_numeric(df_to_save['quantita'], errors='coerce').fillna(0).astype(int)
         
-        # Gestione prezzo con virgola per Google Sheets Italia
         df_to_save['prezzo'] = pd.to_numeric(df_to_save['prezzo'], errors='coerce').fillna(0.0)
         df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{float(x):.2f}".replace('.', ','))
         
         sheet.clear()
-        sheet.append_row(df.columns.tolist())
-        sheet.append_rows(df_to_save.values.tolist())
-        
-        st.success("✅ Salvataggio riuscito!")
-        st.rerun()
-    except Exception as e:
-        st.error(f"Errore durante il salvataggio: {e}")
-
-# --- 6. AGGIUNGI PRODOTTO ---
-with st.expander("➕ Aggiungi Nuovo Prodotto"):
-    with st.form("add_form"):
-        new_cod = st.text_input("Codice")
-        new_cat = st.text_input("Categoria")
-        new_desc = st.text_input("Descrizione")
-        new_qta = st.number_input("Quantità", value=0)
-        new_prz = st.number_input("Prezzo", value=0.0)
-        new_pos = st.text_input("Posizione")
-        if st.form_submit_button("Salva"):
-            sheet.append_row([str(new_cod), str(new_cat), str(new_desc), int(new_qta), float(new_prz), str(new_pos)])
-            st.rerun()
+        sheet.append_row(
