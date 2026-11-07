@@ -3,13 +3,45 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- 1. CONFIGURAZIONE PAGINA (LAYOUT LARGO) ---
+# --- 1. CONFIGURAZIONE PAGINA ---
 st.set_page_config(
     page_title="Gestione Magazzino",
     page_icon="📦",
-    layout="wide"  # <--- Questo espande l'app a tutto schermo
+    layout="wide"
 )
 
+# --- SISTEMA DI AUTENTICAZIONE ---
+def check_password():
+    """Restituisce True se l'utente ha inserito la password corretta."""
+    def password_entered():
+        # Controlla la password inserita rispetto a quella salvata nei secrets (di default '1234' se non configurata)
+        correct_password = st.secrets.get("app_password", "1234")
+        if st.session_state["password"] == correct_password:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Rimuove la password dalla sessione per sicurezza
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        # Primo accesso, mostra il campo password
+        st.subheader("🔐 Accesso Riservato")
+        st.text_input("Inserisci la password per accedere al magazzino:", type="password", on_change=password_entered, key="password")
+        return False
+    elif not st.session_state["password_correct"]:
+        # Password errata
+        st.subheader("🔐 Accesso Riservato")
+        st.text_input("Inserisci la password per accedere al magazzino:", type="password", on_change=password_entered, key="password")
+        st.error("😕 Password errata. Riprova.")
+        return False
+    else:
+        # Password corretta
+        return True
+
+# Blocca l'esecuzione dell'app se la password non è corretta
+if not check_password():
+    st.stop()
+
+# --- 2. CONFIGURAZIONE GOOGLE SHEETS ---
 def get_sheet():
     scope = ["https://spreadsheets.google.com/feeds", 
              "https://www.googleapis.com/auth/spreadsheets",
@@ -22,7 +54,7 @@ sheet = get_sheet()
 
 text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
 
-# --- 2. LETTURA E PULIZIA DATI ---
+# --- 3. LETTURA E PULIZIA DATI ---
 try:
     all_data = sheet.get_all_values()
     if len(all_data) > 1:
@@ -44,7 +76,7 @@ except Exception as e:
     st.error(f"Errore lettura: {e}")
     df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'], dtype=object)
 
-# --- 3. FILTRI DI RICERCA ---
+# --- 4. FILTRI DI RICERCA ---
 st.subheader("📋 Inventario")
 
 ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="Scrivi qui per filtrare...")
@@ -79,7 +111,7 @@ if cat_scelta != "Tutte":
 if pos_scelta != "Tutte":
     df_display = df_display[df_display['posizione'].astype(str) == pos_scelta]
 
-# --- 4. VISUALIZZAZIONE ---
+# --- 5. VISUALIZZAZIONE ---
 editor_key = f"editor_{len(df_display)}"
 
 df_display['quantita'] = pd.to_numeric(df_display['quantita'], errors='coerce').fillna(0).astype(int)
@@ -90,12 +122,12 @@ edited_df = st.data_editor(
     use_container_width=True,
     column_config={
         "prezzo": st.column_config.NumberColumn("Prezzo", format="€%.2f"),
-        "descrizione": st.column_config.TextColumn("Descrizione", width="large"), # Dà più spazio alla descrizione
+        "descrizione": st.column_config.TextColumn("Descrizione", width="large"),
     },
     key=editor_key
 )
 
-# --- 5. SALVATAGGIO MANUALE ---
+# --- 6. SALVATAGGIO MANUALE ---
 if st.button("💾 Salva Modifiche"):
     try:
         for idx in edited_df.index:
@@ -122,7 +154,7 @@ if st.button("💾 Salva Modifiche"):
     except Exception as e:
         st.error(f"Errore durante il salvataggio: {e}")
 
-# --- 6. AGGIUNGI PRODOTTO ---
+# --- 7. AGGIUNGI PRODOTTO ---
 with st.expander("➕ Aggiungi Nuovo Prodotto"):
     with st.form("add_form"):
         new_cod = st.text_input("Codice")
