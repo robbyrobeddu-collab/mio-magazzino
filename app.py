@@ -22,6 +22,12 @@ try:
         headers = [str(c).lower().strip() for c in all_data[0]]
         df = pd.DataFrame(all_data[1:], columns=headers)
         
+        # Pulizia preventiva delle colonne testuali
+        text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
+        for col in text_cols:
+            if col in df.columns:
+                df[col] = df[col].fillna("").astype(str)
+        
         # Forza la colonna prezzo a numerico, trattando la virgola come punto
         df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.')
         df['prezzo'] = pd.to_numeric(df['prezzo'], errors='coerce').fillna(0.0)
@@ -33,14 +39,14 @@ except Exception as e:
 # --- 3. FILTRI DI RICERCA ---
 st.subheader("📋 Inventario")
 
-# Aggiungiamo la barra di ricerca
 ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="Scrivi qui per filtrare...")
 
 col1, col2 = st.columns(2)
 
-# Forza la conversione delle colonne in stringa per evitare errori di tipo
-df['descrizione'] = df['descrizione'].astype(str)
-df['codice'] = df['codice'].astype(str)
+# Assicuriamoci che le colonne di testo siano stringhe
+for col in ['descrizione', 'codice', 'categoria', 'posizione']:
+    if col in df.columns:
+        df[col] = df[col].fillna("").astype(str)
 
 categorie = ["Tutte"] + sorted(df['categoria'].unique().tolist())
 cat_scelta = col1.selectbox("Filtra per Categoria:", categorie)
@@ -52,7 +58,6 @@ df_display = df.copy()
 
 # Logica di filtraggio combinata con gestione sicura dei tipi
 if ricerca:
-    # Cambiato na='' in na=False per rispettare la nuova sintassi di Pandas
     df_display = df_display[
         df_display['descrizione'].str.contains(ricerca, case=False, na=False) | 
         df_display['codice'].str.contains(ricerca, case=False, na=False)
@@ -62,23 +67,32 @@ if cat_scelta != "Tutte":
     df_display = df_display[df_display['categoria'] == cat_scelta]
 if pos_scelta != "Tutte":
     df_display = df_display[df_display['posizione'] == pos_scelta]
-# --- 4. VISUALIZZAZIONE ---
-# Usiamo una key dinamica che cambia se il dataframe filtrato cambia
-editor_key = f"editor_{len(df_display)}"
 
+# --- 4. VISUALIZZAZIONE ---
+editor_key = f"editor_{len(df_display)}"
 
 df_display['quantita'] = pd.to_numeric(df_display['quantita'], errors='coerce').fillna(0).astype(int)
 df_display['prezzo'] = pd.to_numeric(df_display['prezzo'], errors='coerce').fillna(0.0)
+
 edited_df = st.data_editor(
     df_display,
     use_container_width=True,
     column_config={
         "prezzo": st.column_config.NumberColumn("Prezzo", format="€%.2f"),
     },
-    key=editor_key  # <--- Cambia key dinamicamente
+    key=editor_key
 )
-# --- 5. SALVATAGGIO MANUALE (Formato Universale) ---
-if not edited_df.astype(str).equals(df_display.astype(str)):
+
+# --- 5. SALVATAGGIO MANUALE (Formato Universale Sicuro) ---
+def safe_stringify(dframe):
+    """Converte in sicurezza tutte le colonne in stringhe pulite per il confronto"""
+    d = dframe.copy()
+    for col in d.columns:
+        d[col] = d[col].fillna("").astype(str)
+    return d
+
+# Confronto sicuro colonna per colonna senza generare errori di dtype
+if not safe_stringify(edited_df).equals(safe_stringify(df_display)):
     if st.button("💾 Salva Modifiche"):
         try:
             df.update(edited_df)
