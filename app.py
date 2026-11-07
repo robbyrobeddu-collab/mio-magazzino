@@ -127,4 +127,8 @@ with st.expander("➕ Aggiungi Nuovo Prodotto"):
         new_cat = st.text_input("Categoria")
         new_desc = st.text_input("Descrizione")
         new_qta = st.number_input("Quantità", value=0)
-        new_prz = st.number_input("Prezzo", value=
+        new_prz = st.number_input("Prezzo", value=0.0)
+        new_pos = st.text_input("Posizione")
+        if st.form_submit_button("Salva"):
+            sheet.append_row([str(new_cod), str(new_cat), str(new_desc), int(new_qta), float(new_prz), str(new_pos)])
+            st.rerun()
