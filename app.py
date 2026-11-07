@@ -114,4 +114,23 @@ if st.button("💾 Salva Modifiche"):
         df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{float(x):.2f}".replace('.', ','))
         
         sheet.clear()
-        sheet.append_row(
+        sheet.append_row(df.columns.tolist())
+        sheet.append_rows(df_to_save.values.tolist())
+        
+        st.success("✅ Salvataggio riuscito!")
+        st.rerun()
+    except Exception as e:
+        st.error(f"Errore durante il salvataggio: {e}")
+
+# --- 6. AGGIUNGI PRODOTTO ---
+with st.expander("➕ Aggiungi Nuovo Prodotto"):
+    with st.form("add_form"):
+        new_cod = st.text_input("Codice")
+        new_cat = st.text_input("Categoria")
+        new_desc = st.text_input("Descrizione")
+        new_qta = st.number_input("Quantità", value=0)
+        new_prz = st.number_input("Prezzo", value=0.0)
+        new_pos = st.text_input("Posizione")
+        if st.form_submit_button("Salva"):
+            sheet.append_row([str(new_cod), str(new_cat), str(new_desc), int(new_qta), float(new_prz), str(new_pos)])
+            st.rerun()
