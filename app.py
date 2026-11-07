@@ -22,14 +22,14 @@ try:
         headers = [str(c).lower().strip() for c in all_data[0]]
         df = pd.DataFrame(all_data[1:], columns=headers)
         
-        # Pulizia preventiva delle colonne testuali
+        # Pulizia preventiva delle colonne testuali in modo sicuro
         text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
         for col in text_cols:
             if col in df.columns:
-                df[col] = df[col].fillna("").astype(str)
+                df[col] = df[col].fillna("").astype(object).apply(str)
         
         # Forza la colonna prezzo a numerico, trattando la virgola come punto
-        df['prezzo'] = df['prezzo'].astype(str).str.replace(',', '.')
+        df['prezzo'] = df['prezzo'].astype(object).apply(str).str.replace(',', '.')
         df['prezzo'] = pd.to_numeric(df['prezzo'], errors='coerce').fillna(0.0)
     else:
         df = pd.DataFrame(columns=['codice', 'categoria', 'descrizione', 'quantita', 'prezzo', 'posizione'])
@@ -43,10 +43,10 @@ ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="S
 
 col1, col2 = st.columns(2)
 
-# Assicuriamoci che le colonne di testo siano stringhe
+# Assicuriamoci che le colonne di testo siano stringhe standard
 for col in ['descrizione', 'codice', 'categoria', 'posizione']:
     if col in df.columns:
-        df[col] = df[col].fillna("").astype(str)
+        df[col] = df[col].fillna("").astype(object).apply(str)
 
 categorie = ["Tutte"] + sorted(df['categoria'].unique().tolist())
 cat_scelta = col1.selectbox("Filtra per Categoria:", categorie)
@@ -56,7 +56,7 @@ pos_scelta = col2.selectbox("Filtra per Posizione:", posizioni)
 
 df_display = df.copy()
 
-# Logica di filtraggio combinata con gestione sicura dei tipi
+# Logica di filtraggio
 if ricerca:
     df_display = df_display[
         df_display['descrizione'].str.contains(ricerca, case=False, na=False) | 
@@ -83,32 +83,35 @@ edited_df = st.data_editor(
     key=editor_key
 )
 
-# --- 5. SALVATAGGIO MANUALE (Formato Universale Sicuro) ---
-def safe_stringify(dframe):
-    """Converte in sicurezza tutte le colonne in stringhe pulite per il confronto"""
-    d = dframe.copy()
-    for col in d.columns:
-        d[col] = d[col].fillna("").astype(str)
-    return d
-
-# Confronto sicuro colonna per colonna senza generare errori di dtype
-if not safe_stringify(edited_df).equals(safe_stringify(df_display)):
-    if st.button("💾 Salva Modifiche"):
-        try:
-            df.update(edited_df)
-            df_to_save = df.copy()
-            
-            # Formattazione per Google Sheets Italia (usa la virgola)
-            df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{float(x):.2f}".replace('.', ','))
-            
-            sheet.clear()
-            sheet.append_row(df.columns.tolist())
-            sheet.append_rows(df_to_save.values.tolist())
-            
-            st.success("✅ Salvataggio riuscito!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Errore durante il salvataggio: {e}")
+# --- 5. SALVATAGGIO MANUALE (Sicuro senza errori di dtype) ---
+if st.button("💾 Salva Modifiche"):
+    try:
+        # Aggiorniamo riga per riga nel DataFrame principale senza conflitti di tipo
+        for idx in edited_df.index:
+            for col in edited_df.columns:
+                df.loc[idx, col] = edited_df.loc[idx, col]
+        
+        df_to_save = df.copy()
+        
+        # Conversione e pulizia sicura colonna per colonna (evita blocchi PyArrow)
+        for col in ['codice', 'categoria', 'descrizione', 'posizione']:
+            if col in df_to_save.columns:
+                df_to_save[col] = df_to_save[col].fillna("").astype(object).apply(str).replace("nan", "")
+        
+        df_to_save['quantita'] = pd.to_numeric(df_to_save['quantita'], errors='coerce').fillna(0).astype(int)
+        
+        # Gestione prezzo con virgola per Google Sheets Italia
+        df_to_save['prezzo'] = pd.to_numeric(df_to_save['prezzo'], errors='coerce').fillna(0.0)
+        df_to_save['prezzo'] = df_to_save['prezzo'].apply(lambda x: f"{float(x):.2f}".replace('.', ','))
+        
+        sheet.clear()
+        sheet.append_row(df.columns.tolist())
+        sheet.append_rows(df_to_save.values.tolist())
+        
+        st.success("✅ Salvataggio riuscito!")
+        st.rerun()
+    except Exception as e:
+        st.error(f"Errore durante il salvataggio: {e}")
 
 # --- 6. AGGIUNGI PRODOTTO ---
 with st.expander("➕ Aggiungi Nuovo Prodotto"):
