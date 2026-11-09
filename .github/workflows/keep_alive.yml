@@ -3,7 +3,7 @@ name: Streamlit Keep Alive
 on:
   schedule:
     # Esegue l'azione ogni 3 giorni (puoi modificarlo secondo le tue esigenze, es. '0 */12 * * *' per ogni 12 ore)
-    - cron: '0 0 */3 * *'
+    - cron: '0 */12 * * *'
   workflow_dispatch: # Consente di avviare il workflow manualmente dalla tab Actions di GitHub
 
 jobs:
