@@ -3,5 +3,3 @@ pandas
 gspread
 oauth2client
 streamlit-aggrid
-selenium
-webdriver-manager
