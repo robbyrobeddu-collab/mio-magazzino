@@ -2,19 +2,18 @@ name: Streamlit Keep Alive
 
 on:
   schedule:
-    # Esegue l'azione ogni 3 giorni (puoi modificarlo secondo le tue esigenze, es. '0 */12 * * *' per ogni 12 ore)
-    - cron: '0 */12 * * *'
-  workflow_dispatch: # Consente di avviare il workflow manualmente dalla tab Actions di GitHub
+    - cron: '0 0 */3 * *'
+  workflow_dispatch:
 
 jobs:
   ping-streamlit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4   # Aggiornato da v3 a v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5  # Aggiornato da v4 a v5
         with:
           python-version: '3.10'
 
