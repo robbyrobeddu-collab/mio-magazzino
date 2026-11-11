@@ -1,22 +1,17 @@
-import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import requests
 
-options = Options()
-options.add_argument("--headless")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-
-# Inizializza il driver di Chrome
-driver = webdriver.Chrome(options=options)
+# Sostituisci con il link ufficiale della tua app Streamlit
+url = "https://tuo-nome-app.streamlit.app"
 
 try:
-    # Sostituisci con l'URL ufficiale della tua app Streamlit
-    url = "https://tuo-nome-app.streamlit.app"
-    driver.get(url)
+    # Esegue una richiesta GET con un timeout di 30 secondi
+    response = requests.get(url, timeout=30)
     
-    # Attendi qualche secondo per assicurarti che la pagina venga renderizzata completamente
-    time.sleep(15)
-    print(f"App visitata con successo: {url}")
-finally:
-    driver.quit()
+    # Verifica che la risposta sia positiva (Codice 200)
+    if response.status_code == 200:
+        print(f"Successo! App visitata correttamente. Status: {response.status_code}")
+    else:
+        print(f"Attenzione: L'app ha risposto con codice {response.status_code}")
+        
+except Exception as e:
+    print(f"Errore durante la connessione all'app: {e}")
