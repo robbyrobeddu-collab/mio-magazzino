@@ -10,16 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4   # Aggiornato da v3 a v4
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5  # Aggiornato da v4 a v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Install dependencies
         run: |
-          pip install selenium
+          pip install requests   # Sostituito 'selenium' con 'requests'
 
       - name: Run keep-alive script
         run: python keep_alive.py
