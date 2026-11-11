@@ -81,7 +81,8 @@ text_cols = ['codice', 'categoria', 'descrizione', 'posizione']
 # --- 3. FILTRI DI RICERCA ---
 st.subheader("📋 Inventario")
 
-ricerca = st.text_input("🔍 Cerca per descrizione o codice...", placeholder="Scrivi qui per filtrare...")
+# Ampliato il placeholder per indicare che cerca anche nella posizione
+ricerca = st.text_input("🔍 Cerca per descrizione, codice o posizione...", placeholder="Scrivi qui per filtrare...")
 
 col1, col2 = st.columns(2)
 
@@ -100,11 +101,12 @@ pos_scelta = col2.selectbox("Filtra per Posizione:", posizioni)
 
 df_display = df.copy()
 
-# Logica di filtraggio
+# Logica di filtraggio estesa anche alla colonna 'posizione'
 if ricerca:
     mask = (
         df_display['descrizione'].astype(str).str.contains(ricerca, case=False, na=False) | 
-        df_display['codice'].astype(str).str.contains(ricerca, case=False, na=False)
+        df_display['codice'].astype(str).str.contains(ricerca, case=False, na=False) |
+        df_display['posizione'].astype(str).str.contains(ricerca, case=False, na=False)
     )
     df_display = df_display[mask]
 
