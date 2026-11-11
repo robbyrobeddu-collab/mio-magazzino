@@ -1,7 +1,7 @@
 import requests
 
 # Sostituisci con il link ufficiale della tua app Streamlit
-url = "https://tuo-nome-app.streamlit.app"
+url = "https://ricambilvdm.streamlit.app/"
 
 try:
     # Esegue una richiesta GET con un timeout di 30 secondi
